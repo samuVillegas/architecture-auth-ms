@@ -1,10 +1,10 @@
 import {createConnection, getRepository} from "typeorm";
-import {User} from "../entity/user.entity";
+import {UserDetail} from "../entity/user.entity";
 import bcryptjs from "bcryptjs";
 import * as faker from "faker";
 
 createConnection().then(async () => {
-    const repository = getRepository(User);
+    const repository = getRepository(UserDetail);
 
     const password = await bcryptjs.hash("1234", 10);
 
