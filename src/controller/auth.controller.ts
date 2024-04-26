@@ -1,12 +1,11 @@
 import {Request, Response} from "express";
 import {getRepository} from "typeorm";
-import {User} from "../entity/user.entity";
+import {UserDetail} from "../entity/user.entity";
 import bcryptjs from 'bcryptjs';
-import {sign, verify} from "jsonwebtoken";
-import {Order} from "../entity/order.entity";
+import {sign} from "jsonwebtoken";
 
 export const Register = async (req: Request, res: Response) => {
-    const {password, password_confirm, ...body} = req.body;
+    const {password, password_confirm, user_id, ...body} = req.body;
 
     if (password !== password_confirm) {
         return res.status(400).send({
@@ -14,8 +13,9 @@ export const Register = async (req: Request, res: Response) => {
         })
     }
 
-    const user = await getRepository(User).save({
+    const user = await getRepository(UserDetail).save({
         ...body,
+        user_id,
         password: await bcryptjs.hash(password, 10),
         is_ambassador: req.path === '/api/ambassador/register'
     });
@@ -26,7 +26,7 @@ export const Register = async (req: Request, res: Response) => {
 }
 
 export const Login = async (req: Request, res: Response) => {
-    const user = await getRepository(User).findOne({email: req.body.email}, {
+    const user = await getRepository(UserDetail).findOne({email: req.body.email}, {
         select: ["id", "password", "is_ambassador"]
     });
 
@@ -65,26 +65,6 @@ export const Login = async (req: Request, res: Response) => {
     });
 }
 
-export const AuthenticatedUser = async (req: Request, res: Response) => {
-    const user = req["user"];
-
-    if (req.path === '/api/admin/user') {
-        return res.send(user);
-    }
-
-    const orders = await getRepository(Order).find({
-        where: {
-            user_id: user.id,
-            complete: true
-        },
-        relations: ['order_items']
-    });
-
-    user.revenue = orders.reduce((s, o) => s + o.ambassador_revenue, 0);
-
-    res.send(user);
-}
-
 export const Logout = async (req: Request, res: Response) => {
     res.cookie("jwt", "", {maxAge: 0});
 
@@ -96,9 +76,11 @@ export const Logout = async (req: Request, res: Response) => {
 export const UpdateInfo = async (req: Request, res: Response) => {
     const user = req["user"];
 
-    const repository = getRepository(User);
+    const {email} = req.body;
 
-    await repository.update(user.id, req.body);
+    const repository = getRepository(UserDetail);
+
+    await repository.update(user.id, {email});
 
     res.send(await repository.findOne(user.id));
 }
@@ -112,7 +94,7 @@ export const UpdatePassword = async (req: Request, res: Response) => {
         })
     }
 
-    await getRepository(User).update(user.id, {
+    await getRepository(UserDetail).update(user.id, {
         password: await bcryptjs.hash(req.body.password, 10)
     });
 
