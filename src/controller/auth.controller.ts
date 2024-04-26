@@ -5,23 +5,14 @@ import bcryptjs from 'bcryptjs';
 import {sign} from "jsonwebtoken";
 
 export const Register = async (req: Request, res: Response) => {
-    const {password, password_confirm, user_id, ...body} = req.body;
-
-    if (password !== password_confirm) {
-        return res.status(400).send({
-            message: "Password's do not match!"
-        })
-    }
+    const {password, ...body} = req.body;
 
     const user = await getRepository(UserDetail).save({
         ...body,
-        user_id,
-        password: await bcryptjs.hash(password, 10),
-        is_ambassador: req.path === '/api/ambassador/register'
+        password: await bcryptjs.hash(password, 10)
     });
 
     delete user.password;
-
     res.send(user);
 }
 
